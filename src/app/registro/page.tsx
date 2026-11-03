@@ -5,12 +5,12 @@ export const metadata = { title: "Crear cuenta" };
 
 export default function RegisterPage() {
   return (
-    <main className="mx-auto w-full max-w-sm px-4 py-12">
+    <main id="contenido" tabIndex={-1} className="mx-auto w-full max-w-sm px-4 py-12">
       <h1 className="mb-6 text-2xl font-semibold">Crear cuenta</h1>
       <RegisterForm />
-      <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="mt-4 text-sm text-fg-2">
         ¿Ya tienes cuenta?{" "}
-        <Link href="/login" className="underline">
+        <Link href="/login" className="text-link underline">
           Inicia sesion
         </Link>
       </p>

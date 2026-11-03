@@ -1,10 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import type { Database } from "@/lib/database.types";
 
 // Cliente con la sesion del usuario (clave anon + JWT): RLS decide que filas ve.
 // La clave service_role no se usa en la aplicacion.
 export async function createClient() {
+  // supabase-js lee Date.now() (validacion del JWT, reintentos): debe ocurrir en la peticion, no al prerenderizar.
+  await connection();
   const cookieStore = await cookies();
 
   return createServerClient<Database>(

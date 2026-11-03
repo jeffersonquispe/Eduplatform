@@ -387,6 +387,14 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# La invoca el trigger de la base (no un usuario), y se protege con el secreto x-webhook-secret.
+[functions.embed-course]
+verify_jwt = false
+
+# Busqueda publica del catalogo: sin sesion obligatoria, solo devuelve datos publicos.
+[functions.search-courses]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

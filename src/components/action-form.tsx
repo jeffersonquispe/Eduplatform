@@ -2,6 +2,7 @@
 
 import { useActionState, type ReactNode } from "react";
 import type { ActionState } from "@/app/actions/courses";
+import { Alert, buttonClass } from "@/components/ui";
 
 type Props = {
   action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
@@ -12,13 +13,6 @@ type Props = {
   confirm?: string;
   variant?: "primary" | "secondary" | "danger" | "link";
   className?: string;
-};
-
-const VARIANTS = {
-  primary: "rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900",
-  secondary: "rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800",
-  danger: "rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950",
-  link: "text-sm underline",
 };
 
 export function ActionForm({ action, children, submitLabel, pendingLabel, confirm, variant = "primary", className }: Props) {
@@ -34,16 +28,16 @@ export function ActionForm({ action, children, submitLabel, pendingLabel, confir
     >
       {children}
       {state.error ? (
-        <p role="alert" className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {state.error}
-        </p>
+        <div className="mt-2">
+          <Alert tone="error">{state.error}</Alert>
+        </div>
       ) : null}
       {state.ok ? (
-        <p role="status" className="mt-2 text-sm text-green-700 dark:text-green-400">
-          {state.ok}
-        </p>
+        <div className="mt-2">
+          <Alert tone="success">{state.ok}</Alert>
+        </div>
       ) : null}
-      <button type="submit" disabled={pending} className={`${VARIANTS[variant]} disabled:opacity-60 ${children ? "mt-3" : ""}`}>
+      <button type="submit" disabled={pending} className={`${buttonClass(variant, { sm: true })} ${children ? "mt-3" : ""}`}>
         {pending ? (pendingLabel ?? "Guardando...") : submitLabel}
       </button>
     </form>

@@ -27,7 +27,7 @@ E2E tests run serially (1 worker) against the real Supabase project in `.env.loc
 
 **Authorization lives in the database (RLS).** The browser/server use the anon key plus the user's JWT, so RLS is the only real barrier. Server actions and pages check roles only to give clear messages and skip useless calls; do not treat those checks as security. When adding a table, enable RLS in its migration and write policies; update `rls.sql` tests.
 
-Key design decisions (full rationale in `openspec/changes/add-course-platform/design.md` and per-capability specs in `.../specs/`):
+Key design decisions (full rationale in `openspec/changes/archive/2026-10-28-add-course-platform/design.md`; current per-capability specs live in `openspec/specs/<capability>/`):
 - `lessons` (title/position, public for published courses) is split from `lesson_contents` (body/video_url, enrolled users + owner only), because RLS filters rows, not columns.
 - `profiles.role` (`instructor` | `student`) is set at signup by a trigger on `auth.users`; `UPDATE` on `role` is revoked from `authenticated`.
 - `SECURITY DEFINER` helpers (`is_enrolled`, `owns_course`) avoid RLS recursion between tables.
@@ -41,3 +41,11 @@ Key design decisions (full rationale in `openspec/changes/add-course-platform/de
 - `lib/auth.ts`: `getCurrentUser()` (React `cache`d, one query per request), `requireRole(role, next)` for protected pages, `safeNextPath()` to prevent open redirects on `?next=`.
 - `app/actions/*.ts`: server actions (`auth`, `courses`, `enrollments`, `reviews`) returning `ActionState = { error?, ok? }`, used with `components/action-form.tsx`. Pattern: validate input -> run query with the user's session -> if an update/delete returns no rows treat it as "not allowed" (RLS filtered it) -> `revalidatePath`.
 - Data-reading helpers: `lib/courses.ts` (catalog), `lib/learning.ts` (enrolled learning view).
+
+**Styling layer** (EduTech Design System, spec in `Design System.md`; dark theme only):
+- Tokens are CSS variables in `:root` of `app/globals.css`; only the semantic ones are exposed to Tailwind via `@theme inline` (`text-fg-2`, `border-border`, `bg-subtle`, `text-star`...). There is no `tailwind.config.ts` (Tailwind 4). Add new tokens in both places.
+- Reusable components are `.eb-*` classes in `@layer components` (`eb-btn`, `eb-card`, `eb-pill`, `eb-input`, `eb-grid`...), wrapped by `components/ui.tsx` (`buttonClass`, `Badge`, `Alert`, `StatusBadge`). Tailwind utilities override them without `!important`.
+- Focus rings use `box-shadow: var(--ring)` plus `outline: 2px solid transparent` (keeps focus visible in forced-colors mode); keep that pairing on new interactive classes. Touch targets grow to 44px under `@media (pointer: coarse)`.
+- `components/taller-agente.tsx` (home animation) is ported Claude Design code with its own hex palette, `ts-nocheck` and `eslint-disable`; don't treat it as a style reference.
+
+**Gotcha:** user-facing copy is deliberately written without accents ("resena", "Aun sin valoraciones") and e2e specs match those exact strings; changing copy means updating `e2e/*.spec.ts` too.

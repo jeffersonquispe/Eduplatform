@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: {
     default: "Plataforma de cursos de marketing digital e IA",
-    template: "%s | Plataforma de cursos",
+    template: "%s | EduTech",
   },
   description: "Aprende marketing digital e inteligencia artificial con cursos de instructores expertos.",
 };
@@ -29,7 +29,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <Suspense fallback={<div className="h-[49px] border-b border-zinc-200 dark:border-zinc-800" />}>
+        <a href="#contenido" className="eb-skip">
+          Saltar al contenido
+        </a>
+        <Suspense fallback={<div className="eb-header h-[49px]" />}>
           <SiteHeader />
         </Suspense>
         <Suspense fallback={<div className="flex-1" aria-busy="true" />}>{children}</Suspense>

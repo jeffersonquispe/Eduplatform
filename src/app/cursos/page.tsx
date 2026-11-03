@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { CourseCard } from "@/components/course-card";
+import { buttonClass } from "@/components/ui";
 import { getCategories, getPublishedCourses } from "@/lib/courses";
+
+// Pagina dependiente de la sesion y de la base de datos: la navegacion puede esperar al servidor.
+export const instant = false;
 
 export const metadata = { title: "Cursos" };
 
@@ -14,12 +18,7 @@ export default async function CatalogPage({ searchParams }: PageProps<"/cursos">
     getPublishedCourses({ category: categoria, q }),
   ]);
 
-  const pill = (active: boolean) =>
-    `rounded-full border px-3 py-1 text-sm ${
-      active
-        ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
-        : "border-zinc-300 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
-    }`;
+  const pill = (active: boolean) => `eb-pill${active ? " eb-pill--active" : ""}`;
   const withQ = (slug?: string) => {
     const sp = new URLSearchParams();
     if (slug) sp.set("categoria", slug);
@@ -29,7 +28,7 @@ export default async function CatalogPage({ searchParams }: PageProps<"/cursos">
   };
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+    <main id="contenido" tabIndex={-1} className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
       <h1 className="text-2xl font-semibold">Cursos</h1>
 
       <form action="/cursos" role="search" className="mt-4 flex gap-2">
@@ -40,9 +39,9 @@ export default async function CatalogPage({ searchParams }: PageProps<"/cursos">
           defaultValue={q}
           placeholder="Buscar cursos"
           aria-label="Buscar cursos"
-          className="w-full max-w-md rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="eb-input max-w-md"
         />
-        <button type="submit" className="rounded-md bg-zinc-900 px-4 py-2 text-sm text-white dark:bg-zinc-100 dark:text-zinc-900">
+        <button type="submit" className="eb-btn eb-btn--primary">
           Buscar
         </button>
       </form>
@@ -58,17 +57,39 @@ export default async function CatalogPage({ searchParams }: PageProps<"/cursos">
         ))}
       </nav>
 
+      {categoria || q ? (
+        <div className="mt-4 flex flex-wrap items-center gap-2" aria-label="Filtros activos">
+          <span className="text-xs text-fg-3">Filtros:</span>
+          {q ? (
+            <Link href={categoria ? `/cursos?categoria=${categoria}` : "/cursos"} className="eb-chip">
+              Búsqueda: {q} <span aria-hidden>×</span>
+              <span className="sr-only">Quitar búsqueda</span>
+            </Link>
+          ) : null}
+          {categoria ? (
+            <Link href={q ? `/cursos?q=${encodeURIComponent(q)}` : "/cursos"} className="eb-chip">
+              {categories.find((c) => c.slug === categoria)?.name ?? categoria} <span aria-hidden>×</span>
+              <span className="sr-only">Quitar categoría</span>
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="mt-6">
         {courses.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-zinc-300 p-8 text-center text-sm text-zinc-500 dark:border-zinc-700">
-            No encontramos cursos con esos criterios.
-          </p>
+          <div className="rounded-lg border border-dashed border-border-strong p-8 text-center">
+            <p className="text-sm text-fg-3">No encontramos cursos con esos criterios.</p>
+            <p className="mt-1 text-sm text-fg-2">Prueba con otras palabras o explora todo el catálogo.</p>
+            <Link href="/cursos" className={`${buttonClass("primary", { sm: true })} mt-4`}>
+              Quitar filtros
+            </Link>
+          </div>
         ) : (
           <>
-            <p className="mb-3 text-sm text-zinc-500">
+            <p className="mb-3 text-sm text-fg-3" role="status" aria-live="polite">
               {courses.length} {courses.length === 1 ? "curso" : "cursos"}
             </p>
-            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="eb-grid">
               {courses.map((c) => (
                 <CourseCard key={c.id} course={c} />
               ))}

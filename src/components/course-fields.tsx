@@ -1,5 +1,4 @@
-const inputClass =
-  "w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900";
+import { inputClass } from "@/components/ui";
 
 type Props = {
   categories: { id: string; name: string }[];
@@ -9,15 +8,15 @@ type Props = {
 export function CourseFields({ categories, defaults }: Props) {
   return (
     <div className="space-y-4">
-      <label className="block space-y-1 text-sm">
+      <label className="eb-label">
         <span>Titulo</span>
         <input name="title" required maxLength={200} defaultValue={defaults?.title} className={inputClass} />
       </label>
-      <label className="block space-y-1 text-sm">
+      <label className="eb-label">
         <span>Descripcion</span>
         <textarea name="description" rows={5} defaultValue={defaults?.description} className={inputClass} />
       </label>
-      <label className="block space-y-1 text-sm">
+      <label className="eb-label">
         <span>Categoria</span>
         <select name="category_id" defaultValue={defaults?.category_id ?? ""} className={inputClass}>
           <option value="">Sin categoria</option>

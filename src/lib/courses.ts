@@ -19,9 +19,50 @@ export async function getCategories() {
   return data ?? [];
 }
 
+type SemanticRow = {
+  id: string;
+  title: string;
+  description: string;
+  rating_avg: number;
+  rating_count: number;
+  category_slug: string | null;
+  category_name: string | null;
+  instructor_id: string | null;
+  instructor_display_name: string | null;
+};
+
+// Busqueda semantica: la Edge Function `search-courses` convierte la frase en un embedding y devuelve
+// los cursos publicados mas cercanos, ya ordenados por similitud. Devuelve null si falla, para que el
+// catalogo recurra a la busqueda de texto completo en vez de quedarse sin resultados.
+async function searchSemantic(q: string): Promise<CourseSummary[] | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.functions.invoke("search-courses", {
+    body: { query: q.slice(0, 200), limit: 20 },
+  });
+  if (error || !Array.isArray(data?.courses)) return null;
+
+  return (data.courses as SemanticRow[]).map((c) => ({
+    id: c.id,
+    title: c.title,
+    description: c.description,
+    rating_avg: c.rating_avg,
+    rating_count: c.rating_count,
+    category: c.category_slug && c.category_name ? { slug: c.category_slug, name: c.category_name } : null,
+    instructor: c.instructor_id ? { id: c.instructor_id, display_name: c.instructor_display_name ?? "" } : null,
+  }));
+}
+
 // Catalogo publico: siempre filtra por publicado, aunque RLS tambien deja ver
 // borradores propios y cursos despublicados en los que el usuario esta inscrito.
+// Con `q` ordena por cercania semantica; sin `q` (o si la busqueda semantica falla) usa fecha y texto completo.
 export async function getPublishedCourses(opts: { category?: string; q?: string } = {}) {
+  const q = opts.q?.trim();
+
+  if (q) {
+    const semantic = await searchSemantic(q);
+    if (semantic) return opts.category ? semantic.filter((c) => c.category?.slug === opts.category) : semantic;
+  }
+
   const supabase = await createClient();
 
   let query = supabase
@@ -30,7 +71,6 @@ export async function getPublishedCourses(opts: { category?: string; q?: string 
     .eq("status", "published")
     .order("created_at", { ascending: false });
 
-  const q = opts.q?.trim();
   if (q) query = query.textSearch("search", q, { config: "spanish", type: "websearch" });
 
   if (opts.category) {

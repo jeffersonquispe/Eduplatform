@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
+import { AssistantWidget } from "@/components/assistant-widget";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,6 +37,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <SiteHeader />
         </Suspense>
         <Suspense fallback={<div className="flex-1" aria-busy="true" />}>{children}</Suspense>
+        {/* usePathname puede suspender con cacheComponents: su propio limite no bloquea el resto. */}
+        <Suspense fallback={null}>
+          <AssistantWidget />
+        </Suspense>
       </body>
     </html>
   );

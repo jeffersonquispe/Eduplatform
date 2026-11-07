@@ -215,6 +215,19 @@ main:focus { outline: none; }
 .eb-chip:hover { background: var(--surface-hover); }
 .eb-header a[aria-current="page"] { color: var(--fg-1); text-decoration: underline; text-underline-offset: 6px; }
 
+/* Asistente: boton flotante y ventana lateral no modal, bajo la cabecera, con el iframe del servicio Edy */
+.eb-assistant-launcher { position: fixed; right: 16px; bottom: 16px; z-index: 40; box-shadow: var(--shadow-md); }
+.eb-assistant-panel { position: fixed; top: 57px; right: 16px; bottom: 72px; z-index: 41; display: flex; flex-direction: column; width: min(400px, calc(100vw - 32px)); overflow: hidden; border: 1px solid var(--border-strong); border-radius: var(--radius-lg); background: var(--surface-card); box-shadow: var(--shadow-md); }
+.eb-assistant-panel[hidden] { display: none; }
+.eb-assistant-bar { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px 4px 16px; border-bottom: 1px solid var(--border); }
+.eb-assistant-body { position: relative; flex: 1; min-height: 0; }
+.eb-assistant-state { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 16px; }
+.eb-assistant-frame { display: block; width: 100%; height: 100%; border: 0; }
+.eb-assistant-frame[hidden] { display: none; }
+@media (max-width: 480px) {
+  .eb-assistant-panel { inset: 0; width: 100%; border: 0; border-radius: 0; }
+}
+
 /* Objetivos tactiles de 44px en pantallas tactiles */
 @media (pointer: coarse) {
   .eb-btn, .eb-pill, .eb-chip, .eb-card a { min-height: 44px; }

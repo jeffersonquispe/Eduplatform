@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Edge Functions corren en Deno, no en Next.
     "supabase/functions/**",
+    // Export de Claude Design: referencia del asistente, no es codigo de la app.
+    "Asistente EduTech chatbot/**",
   ]),
 ]);
 

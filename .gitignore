@@ -44,3 +44,7 @@ next-env.d.ts
 # playwright
 /test-results/
 /playwright-report/
+
+# export de Claude Design: referencia del asistente, no es codigo de la app
+/Asistente EduTech chatbot/
+/Asistente EduTech chatbot.zip

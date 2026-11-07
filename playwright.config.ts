@@ -23,5 +23,7 @@ export default defineConfig({
     url: `http://localhost:${PORT}`,
     reuseExistingServer: false,
     timeout: PROD ? 300_000 : 120_000,
+    // Origen falso del asistente: e2e/assistant.spec.ts lo simula con page.route, sin depender de Edy.
+    env: { NEXT_PUBLIC_EDY_URL: "http://edy.test" },
   },
 });

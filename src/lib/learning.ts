@@ -14,6 +14,20 @@ export type Outline = {
   }[];
 };
 
+// Solo para metadata (titulo de pestana): no replica el chequeo de acceso de requireCourseAccess,
+// RLS ya devuelve null si el usuario no puede ver el curso o la leccion.
+export async function getCourseTitle(courseId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase.from("courses").select("title").eq("id", courseId).maybeSingle();
+  return data?.title ?? null;
+}
+
+export async function getLessonTitle(lessonId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase.from("lessons").select("title").eq("id", lessonId).maybeSingle();
+  return data?.title ?? null;
+}
+
 export async function isEnrolled(courseId: string, userId: string) {
   const supabase = await createClient();
   const { data } = await supabase

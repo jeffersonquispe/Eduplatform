@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "eduplatform-context": {
+      "command": "node",
+      "args": ["mcp-server/index.js"]
+    }
+  }
+}

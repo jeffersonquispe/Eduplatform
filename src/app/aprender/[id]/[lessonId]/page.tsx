@@ -2,12 +2,19 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ActionForm } from "@/components/action-form";
 import { unenroll } from "@/app/actions/enrollments";
-import { getLessonContent, requireCourseAccess } from "@/lib/learning";
+import { getLessonContent, getLessonTitle, requireCourseAccess } from "@/lib/learning";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Pagina dependiente de la sesion y de la base de datos: la navegacion puede esperar al servidor.
 export const instant = false;
+
+export async function generateMetadata({ params }: PageProps<"/aprender/[id]/[lessonId]">) {
+  const { id, lessonId } = await params;
+  if (!UUID.test(id) || !UUID.test(lessonId)) return {};
+  const title = await getLessonTitle(lessonId);
+  return title ? { title } : {};
+}
 
 export default async function LessonPage({ params }: PageProps<"/aprender/[id]/[lessonId]">) {
   const { id, lessonId } = await params;
@@ -28,7 +35,7 @@ export default async function LessonPage({ params }: PageProps<"/aprender/[id]/[
   const isOwner = outline.instructor_id === user.id;
 
   return (
-    <div id="contenido" tabIndex={-1} className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-6 md:flex-row">
+    <main id="contenido" tabIndex={-1} className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-6 md:flex-row">
       <aside className="md:w-72 md:shrink-0" aria-label="Contenido del curso">
         <Link href={isOwner ? `/instructor/cursos/${id}` : "/mis-cursos"} className="text-sm text-fg-3 hover:underline">
           ← {isOwner ? "Volver al editor" : "Mis cursos"}
@@ -115,6 +122,6 @@ export default async function LessonPage({ params }: PageProps<"/aprender/[id]/[
           </div>
         ) : null}
       </article>
-    </div>
+    </main>
   );
 }

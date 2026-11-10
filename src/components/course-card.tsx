@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { CourseSummary } from "@/lib/courses";
+import { coursePlaceholder } from "@/lib/course-placeholder";
 import { Badge, StatusBadge } from "@/components/ui";
 
 export function Rating({ avg, count }: { avg: number; count: number }) {
@@ -26,12 +27,23 @@ type Props = {
   actions?: ReactNode;
   // Variante instructor: dato secundario bajo la descripcion (p. ej. inscritos).
   meta?: ReactNode;
+  // Ilustracion generica por categoria (los cursos no tienen imagen propia en la BD).
+  showImage?: boolean;
 };
 
-export function CourseCard({ course, variant = "catalog", status, href, actions, meta }: Props) {
+export function CourseCard({ course, variant = "catalog", status, href, actions, meta, showImage = false }: Props) {
   const instructor = variant === "instructor";
   return (
     <li className="eb-card">
+      {showImage ? (
+        <img
+          src={coursePlaceholder(course.category?.slug ?? course.id)}
+          alt=""
+          width={400}
+          height={160}
+          className="mb-3 h-28 w-full rounded-md object-cover"
+        />
+      ) : null}
       <div className="mb-2 flex flex-wrap gap-2 empty:hidden">
         {course.category ? <Badge>{course.category.name}</Badge> : null}
         {instructor && status ? <StatusBadge status={status} /> : null}

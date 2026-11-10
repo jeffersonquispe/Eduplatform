@@ -32,6 +32,14 @@ type SectionRow = { id: string; title: string; position: number; lessons: Lesson
 // Pagina dependiente de la sesion y de la base de datos: la navegacion puede esperar al servidor.
 export const instant = false;
 
+export async function generateMetadata({ params }: PageProps<"/instructor/cursos/[id]">) {
+  const { id } = await params;
+  if (!UUID.test(id)) return {};
+  const supabase = await createClient();
+  const { data } = await supabase.from("courses").select("title").eq("id", id).maybeSingle();
+  return data ? { title: data.title } : {};
+}
+
 export default async function EditCoursePage({ params }: PageProps<"/instructor/cursos/[id]">) {
   const { id } = await params;
   if (!UUID.test(id)) notFound();

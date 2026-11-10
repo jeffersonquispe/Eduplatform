@@ -14,6 +14,7 @@ export async function SiteHeader() {
             EduTech
           </Link>
           <NavLink href="/cursos">Cursos</NavLink>
+          <NavLink href="/quienes-somos">Quienes somos</NavLink>
         </div>
 
         <div className="flex items-center gap-4">

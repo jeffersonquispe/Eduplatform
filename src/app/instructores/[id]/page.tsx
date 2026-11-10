@@ -7,6 +7,13 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // Pagina dependiente de la sesion y de la base de datos: la navegacion puede esperar al servidor.
 export const instant = false;
 
+export async function generateMetadata({ params }: PageProps<"/instructores/[id]">) {
+  const { id } = await params;
+  if (!UUID.test(id)) return {};
+  const result = await getInstructorProfile(id);
+  return result ? { title: result.profile.display_name } : {};
+}
+
 export default async function InstructorProfilePage({ params }: PageProps<"/instructores/[id]">) {
   const { id } = await params;
   if (!UUID.test(id)) notFound();

@@ -1,11 +1,18 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { requireCourseAccess } from "@/lib/learning";
+import { getCourseTitle, requireCourseAccess } from "@/lib/learning";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Pagina dependiente de la sesion y de la base de datos: la navegacion puede esperar al servidor.
 export const instant = false;
+
+export async function generateMetadata({ params }: PageProps<"/aprender/[id]">) {
+  const { id } = await params;
+  if (!UUID.test(id)) return {};
+  const title = await getCourseTitle(id);
+  return title ? { title } : {};
+}
 
 export default async function LearnIndexPage({ params }: PageProps<"/aprender/[id]">) {
   const { id } = await params;

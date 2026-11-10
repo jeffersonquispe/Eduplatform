@@ -6,6 +6,7 @@ Define el comportamiento del asistente Edy: la página embebible, la conversaci�
 
 ## Requirements
 
+
 ### Requirement: Página del asistente embebible solo desde orígenes autorizados
 El servicio SHALL publicar una página del asistente con los modos de texto y voz, y SHALL permitir embeberla únicamente desde los orígenes configurados.
 

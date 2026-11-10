@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CourseCard } from "@/components/course-card";
+import { FeaturedCourses } from "@/components/featured-courses";
 import TallerAgente from "@/components/taller-agente";
 import { getCategories, getPublishedCourses } from "@/lib/courses";
 
@@ -48,17 +48,9 @@ export default async function Home() {
         </ul>
       </section>
 
-      <section className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold">Ultimos cursos</h2>
-        {courses.length === 0 ? (
-          <p className="text-sm text-fg-3">Todavia no hay cursos publicados.</p>
-        ) : (
-          <ul className="eb-grid">
-            {courses.slice(0, 6).map((c) => (
-              <CourseCard key={c.id} course={c} />
-            ))}
-          </ul>
-        )}
+      <section className="mt-10" aria-labelledby="destacados-titulo">
+        <h2 id="destacados-titulo" className="mb-3 text-lg font-semibold">Cursos destacados</h2>
+        <FeaturedCourses courses={courses} showImage />
       </section>
     </main>
   );

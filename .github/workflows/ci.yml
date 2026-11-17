@@ -40,3 +40,53 @@ jobs:
       # Solo el proyecto "unit": no necesita secrets. Las de integracion y e2e requieren Supabase.
       - name: Pruebas de Vitest
         run: npm run test:unit
+
+  e2e:
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Los secrets no existen en PRs desde forks: ahi el job se salta en vez de fallar.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    # Los E2E crean y borran datos en el mismo proyecto Supabase: nunca dos a la vez, sea cual sea la rama.
+    concurrency:
+      group: e2e-supabase
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Solo Chromium (el unico proyecto de playwright.config.ts), con sus librerias del sistema.
+      - name: Instalar Chromium
+        run: npx playwright install --with-deps chromium
+
+      # E2E_PROD=1 hace que el webServer de Playwright ejecute `npm run build && npm run start`
+      # (build de produccion en .next-e2e, puerto 3100) y espere a que responda antes de las pruebas.
+      # NEXT_PUBLIC_* se incrustan en el bundle al compilar: aqui solo van valores publicos.
+      - name: Playwright contra el build de produccion
+        env:
+          E2E_PROD: "1"
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_TEST_ANON_KEY }}
+          E2E_INSTRUCTOR_EMAIL: ${{ secrets.E2E_INSTRUCTOR_EMAIL }}
+          E2E_INSTRUCTOR_PASSWORD: ${{ secrets.E2E_INSTRUCTOR_PASSWORD }}
+          E2E_STUDENT_EMAIL: ${{ secrets.E2E_STUDENT_EMAIL }}
+          E2E_STUDENT_PASSWORD: ${{ secrets.E2E_STUDENT_PASSWORD }}
+        run: npm run test:e2e
+
+      # Reporte HTML y trazas (test-results/, solo se conservan las de pruebas fallidas).
+      - name: Subir reporte y trazas
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-e2e
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+          if-no-files-found: warn

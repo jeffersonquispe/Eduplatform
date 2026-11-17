@@ -33,18 +33,47 @@ permissions:
   pull-requests: write
 
 jobs:
+  # El contexto "secrets" no se puede usar en condiciones "if:", asi que este job lo traduce a
+  # outputs booleanos (sin exponer valores) y los demas jobs deciden con "needs.config.outputs.*".
+  config:
+    runs-on: ubuntu-latest
+    outputs:
+      has_integration: ${{ steps.c.outputs.has_integration }}
+      has_e2e: ${{ steps.c.outputs.has_e2e }}
+      has_supabase: ${{ steps.c.outputs.has_supabase }}
+    steps:
+      - id: c
+        env:
+          URL: ${{ secrets.SUPABASE_TEST_URL }}
+          ANON: ${{ secrets.SUPABASE_TEST_ANON_KEY }}
+          SERVICE: ${{ secrets.SUPABASE_TEST_SERVICE_ROLE_KEY }}
+          I_EMAIL: ${{ secrets.E2E_INSTRUCTOR_EMAIL }}
+          S_EMAIL: ${{ secrets.E2E_STUDENT_EMAIL }}
+        run: |
+          supabase=false; integration=false; e2e=false
+          if [ -n "$URL" ] && [ -n "$ANON" ]; then supabase=true; fi
+          if [ "$supabase" = true ] && [ -n "$SERVICE" ]; then integration=true; fi
+          if [ "$supabase" = true ] && [ -n "$I_EMAIL" ] && [ -n "$S_EMAIL" ]; then e2e=true; fi
+          {
+            echo "has_supabase=$supabase"
+            echo "has_integration=$integration"
+            echo "has_e2e=$e2e"
+          } >> "$GITHUB_OUTPUT"
+
   tests:
+    needs: config
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version-file: .nvmrc
+          cache: npm
       - run: npm ci
       - run: npm run lint
       - run: npm run test:unit
       - name: Run integration tests
-        if: ${{ secrets.SUPABASE_TEST_URL != '' && secrets.SUPABASE_TEST_ANON_KEY != '' && secrets.SUPABASE_TEST_SERVICE_ROLE_KEY != '' }}
+        if: ${{ needs.config.outputs.has_integration == 'true' }}
         env:
           SUPABASE_TEST_URL: ${{ secrets.SUPABASE_TEST_URL }}
           SUPABASE_TEST_ANON_KEY: ${{ secrets.SUPABASE_TEST_ANON_KEY }}
@@ -53,18 +82,20 @@ jobs:
         run: npm run test:integration
 
   e2e:
+    needs: config
     runs-on: ubuntu-latest
     # Criterios de aceptacion verificados con la suite local de Playwright, no con el Agente QA
     # externo. Usa el proyecto Supabase de pruebas y las cuentas de supabase/tests/e2e-fixtures.sql;
     # sin esos secrets, se salta entero (igual que integration tests en el job "tests").
-    if: ${{ secrets.SUPABASE_TEST_URL != '' && secrets.SUPABASE_TEST_ANON_KEY != '' && secrets.E2E_INSTRUCTOR_EMAIL != '' && secrets.E2E_STUDENT_EMAIL != '' }}
+    if: ${{ needs.config.outputs.has_e2e == 'true' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version-file: .nvmrc
+          cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps
+      - run: npx playwright install --with-deps chromium
       - name: Ejecutar pruebas e2e (criterios de aceptacion de openspec/specs)
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
@@ -111,16 +142,18 @@ jobs:
           path: code-review-report.md
 
   web-vitals:
+    needs: config
     runs-on: ubuntu-latest
     # Reutiliza los secrets del proyecto Supabase de pruebas (los mismos del job "tests"): sin ellos
     # /cursos no tiene datos reales que medir, asi que el job se salta por completo.
-    if: ${{ secrets.SUPABASE_TEST_URL != '' && secrets.SUPABASE_TEST_ANON_KEY != '' }}
+    if: ${{ needs.config.outputs.has_supabase == 'true' }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version-file: .nvmrc
+          cache: npm
 
       - name: Instalar Chrome
         id: setup-chrome
@@ -171,7 +204,7 @@ jobs:
             reports/perf/pr-${{ github.event.pull_request.number }}/summary.json
 
   comment:
-    needs: [code-review, web-vitals]
+    needs: [config, code-review, web-vitals]
     if: always()
     runs-on: ubuntu-latest
     permissions:

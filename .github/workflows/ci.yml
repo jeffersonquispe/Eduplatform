@@ -30,6 +30,10 @@ jobs:
       - name: Linter
         run: npm run lint
 
+      # PageProps y LayoutProps son tipos globales que Next genera (.next/types); en un checkout limpio no existen.
+      - name: Generar tipos de rutas de Next
+        run: npx next typegen
+
       - name: Verificador de tipos
         run: npx tsc --noEmit
 

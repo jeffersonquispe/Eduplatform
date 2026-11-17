@@ -81,18 +81,22 @@ async function discoverLesson() {
   return lessonHref;
 }
 
+// Sin sesion guardada de estudiante (p.ej. CI de solo paginas publicas) se omiten "leccion" y "mis-cursos".
+const hasStudentAuth = fs.existsSync(AUTH.student);
+if (!hasStudentAuth) console.warn(`AVISO: no existe ${AUTH.student}; se omiten las paginas que requieren sesion de estudiante.`);
+
 // Un curso publico cualquiera del catalogo para la pagina de detalle.
 const catalog = await (await fetch(BASE_URL + "/cursos")).text();
 const courseId = catalog.match(/href="\/cursos\/([0-9a-f-]{36})"/)?.[1];
-const lessonPath = await discoverLesson();
+const lessonPath = hasStudentAuth ? await discoverLesson() : null;
 const targets = [
   { name: "home", path: "/", role: null },
   { name: "cursos", path: "/cursos", role: null },
   { name: "curso-detalle", path: `/cursos/${courseId}`, role: null },
   ...(lessonPath ? [{ name: "leccion", path: lessonPath, role: "student" }] : []),
-  { name: "mis-cursos", path: "/mis-cursos", role: "student" },
+  ...(hasStudentAuth ? [{ name: "mis-cursos", path: "/mis-cursos", role: "student" }] : []),
 ];
-if (!lessonPath) console.warn("AVISO: el estudiante guardado no esta inscrito en ningun curso; se omite la pagina de leccion.");
+if (hasStudentAuth && !lessonPath) console.warn("AVISO: el estudiante guardado no esta inscrito en ningun curso; se omite la pagina de leccion.");
 
 // ONLY=home,cursos limita las paginas medidas.
 const sumBytes = (a, type) =>

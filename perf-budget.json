@@ -1,0 +1,11 @@
+{
+  "_comentario": "Presupuesto de rendimiento comparado contra la mediana de scripts/lighthouse-perf.mjs (scripts/check-perf-budget.mjs). lcp y tbt en milisegundos, cls sin unidad. tbt se usa como proxy de INP: Lighthouse de laboratorio no mide INP real (requiere interaccion de usuario), pero TBT correlaciona con el. Umbrales = 'good' de web.dev (LCP<=2500ms, CLS<=0.1, TBT<=200ms), con margen extra en paginas con sesion (mas JS por el panel del asistente, etc.). Solo informa: no bloquea el merge.",
+  "default": { "lcp": 2500, "cls": 0.1, "tbt": 200 },
+  "paginas": {
+    "home": { "lcp": 2500, "cls": 0.1, "tbt": 200 },
+    "cursos": { "lcp": 2500, "cls": 0.1, "tbt": 200 },
+    "curso-detalle": { "lcp": 2500, "cls": 0.1, "tbt": 200 },
+    "mis-cursos": { "lcp": 3000, "cls": 0.1, "tbt": 250 },
+    "leccion": { "lcp": 3000, "cls": 0.1, "tbt": 250 }
+  }
+}

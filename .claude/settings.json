@@ -10,6 +10,13 @@
             "args": [".claude/hooks/block-secrets.js"],
             "timeout": 10,
             "statusMessage": "Revisando que no sea un .env o un secreto..."
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [".claude/hooks/check-rls.js"],
+            "timeout": 10,
+            "statusMessage": "Revisando service_role y RLS en migraciones..."
           }
         ]
       }

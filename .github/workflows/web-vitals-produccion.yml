@@ -1,0 +1,118 @@
+name: Web Vitals (produccion)
+
+# Decisiones de diseño:
+# - Corre contra la URL real (vars.PRODUCTION_URL, una Variable del repo, no un secret: es solo una
+#   URL publica). No hace build ni necesita secretos: mide la pagina que ya esta desplegada.
+# - Mismo presupuesto que el job de PR (perf-budget.json) y el mismo comparador
+#   (scripts/check-perf-budget.mjs): solo informa, nunca bloquea nada ni hace rollback.
+# - Si hay alguna pagina que excede el presupuesto, actualiza (o crea) un unico issue "sticky" en
+#   vez de abrir uno nuevo cada corrida, para no generar fatiga de alertas. Si la siguiente corrida
+#   ya no excede nada, cierra ese issue con un comentario. No hay deduplicacion por "N corridas
+#   consecutivas" todavia (ver plan de fases, bloque C2): un solo pico de red puede abrir el issue.
+#   Si eso genera ruido en la practica, el siguiente paso es exigir 2-3 corridas seguidas antes de
+#   abrir el issue, no bajar el presupuesto.
+# - Mide solo paginas publicas (home/cursos/curso-detalle): no hay sesion contra produccion desde CI.
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # 06:00 UTC todos los dias
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  web-vitals-produccion:
+    runs-on: ubuntu-latest
+    if: ${{ vars.PRODUCTION_URL != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Instalar Chrome
+        id: setup-chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - run: npm ci
+
+      - name: Instalar herramientas de Lighthouse (no se guardan en package.json)
+        run: npm install --no-save lighthouse chrome-launcher playwright-core
+
+      - name: Medir Web Vitals de produccion (paginas publicas)
+        env:
+          PERF_TOOLS_DIR: ${{ github.workspace }}
+          CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+          BASE_URL: ${{ vars.PRODUCTION_URL }}
+          OUT_DIR: reports/perf/produccion-${{ github.run_id }}
+          RUNS: 3
+          ONLY: home,cursos,curso-detalle
+        run: node scripts/lighthouse-perf.mjs
+
+      - name: Comparar contra el presupuesto
+        id: budget
+        run: |
+          node scripts/check-perf-budget.mjs "reports/perf/produccion-${{ github.run_id }}/summary.json" > web-vitals-report.md
+          if grep -q "EXCEDE" web-vitals-report.md; then
+            echo "excede=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "excede=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: web-vitals-produccion-${{ github.run_id }}
+          path: |
+            web-vitals-report.md
+            reports/perf/produccion-${{ github.run_id }}/summary.json
+          retention-days: 90
+
+      - name: Abrir o actualizar issue si excede el presupuesto
+        if: ${{ steps.budget.outputs.excede == '1' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const cuerpo = fs.readFileSync("web-vitals-report.md", "utf8");
+            const titulo = "Web Vitals de produccion: presupuesto excedido";
+            const { data: abiertos } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo, state: "open", labels: "web-vitals",
+            });
+            const existente = abiertos.find((i) => i.title === titulo);
+            const pie = `\n\n_Corrida: ${context.runId} · ${new Date().toISOString()}_`;
+            if (existente) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo, issue_number: existente.number,
+                body: `Sigue excediendo el presupuesto.${pie}\n\n${cuerpo}`,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo, title: titulo,
+                labels: ["web-vitals"],
+                body: `Informe automatico, no bloquea nada: decide una persona si es una regresion real.${pie}\n\n${cuerpo}`,
+              });
+            }
+
+      - name: Cerrar el issue si ya no excede el presupuesto
+        if: ${{ steps.budget.outputs.excede == '0' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const titulo = "Web Vitals de produccion: presupuesto excedido";
+            const { data: abiertos } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo, state: "open", labels: "web-vitals",
+            });
+            const existente = abiertos.find((i) => i.title === titulo);
+            if (existente) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo, issue_number: existente.number,
+                body: `Recuperado: la ultima corrida (${context.runId}) esta dentro del presupuesto.`,
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner, repo: context.repo.repo, issue_number: existente.number, state: "closed",
+              });
+            }

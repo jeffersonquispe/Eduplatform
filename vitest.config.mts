@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => ({
         extends: true,
         test: {
           name: "unit",
-          include: ["src/**/*.test.{ts,tsx}"],
+          include: ["src/**/*.test.{ts,tsx}", ".claude/hooks/**/*.test.mjs"],
           exclude: ["**/node_modules/**", "e2e/**", ".next/**", "src/**/*.integration.test.{ts,tsx}"],
         },
       },

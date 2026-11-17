@@ -1,17 +1,22 @@
-name: PR Review (tests + Agente QA + code-reviewer)
+name: PR Review (tests + e2e + code-reviewer + Web Vitals)
 
 # Decisiones de diseño, para quien lea/mantenga este workflow:
-# - El Agente QA vive en un repo aparte (jeffersonquispe/agentQAEduplatform); se clona como
-#   checkout adicional en el job qa-agent.
-# - El Agente QA solo corre con --tipos unitaria: sus pruebas e2e/sql usan el proyecto Supabase
-#   vinculado y, segun su propio README, pueden mutar datos (p.ej. borrar cuentas @e2e-test.local).
-#   No se habilitan automaticamente en un PR sin supervision.
-# - Que capability(s) evaluar se decide por un mapeo heuristico de archivos cambiados
-#   (scripts/map-changed-files-to-capabilities.mjs) — ajustalo si una capability nueva no coincide.
+# - Los criterios de aceptacion de openspec/specs se verifican con la propia suite de Playwright
+#   (e2e/*.spec.ts) en el job "e2e", no con el Agente QA externo (jeffersonquispe/agentQAEduplatform):
+#   es una prueba local, determinista y repetible, no un reporte de un modelo. Igual que las pruebas
+#   de integracion, usa el proyecto Supabase de pruebas y las cuentas de e2e-fixtures.sql — por eso
+#   solo corre si estan los secrets E2E_*/SUPABASE_TEST_* y, como el job tests, es un gate real: si
+#   falla, el PR no deberia mergearse.
 # - El code-reviewer es el subagente .claude/agents/code-reviewer.md, invocado en modo headless con
 #   la Claude Code CLI.
-# - Los tests (lint/unit/integration) son un chequeo normal del PR; el Agente QA y el code-reviewer
-#   publican su propio comentario con hallazgos — son reportes para que decida una persona, no gates.
+# - El job web-vitals mide LCP/CLS/TBT (proxy de INP) con scripts/lighthouse-perf.mjs sobre un build
+#   de produccion local, solo en paginas publicas (home/cursos/curso-detalle: no requiere sesion ni
+#   secretos nuevos) y compara contra perf-budget.json con scripts/check-perf-budget.mjs. Reutiliza
+#   SUPABASE_TEST_URL/ANON_KEY (los mismos del job tests) para que /cursos tenga datos reales; si no
+#   estan configurados, el job se salta entero.
+# - tests y e2e son los gates reales del PR (deben pasar). El code-reviewer y el agente de Web Vitals
+#   solo publican un reporte con hallazgos — son informes para que decida una persona, nunca bloquean
+#   el merge.
 # - En PRs desde forks, GITHUB_TOKEN es de solo lectura por defecto: el paso de comentario puede fallar
 #   ahi; no es un bug de este workflow.
 
@@ -47,75 +52,34 @@ jobs:
           SUPABASE_TEST_ALLOW_REMOTE: "1"
         run: npm run test:integration
 
-  qa-agent:
+  e2e:
     runs-on: ubuntu-latest
+    # Criterios de aceptacion verificados con la suite local de Playwright, no con el Agente QA
+    # externo. Usa el proyecto Supabase de pruebas y las cuentas de supabase/tests/e2e-fixtures.sql;
+    # sin esos secrets, se salta entero (igual que integration tests en el job "tests").
+    if: ${{ secrets.SUPABASE_TEST_URL != '' && secrets.SUPABASE_TEST_ANON_KEY != '' && secrets.E2E_INSTRUCTOR_EMAIL != '' && secrets.E2E_STUDENT_EMAIL != '' }}
     steps:
-      - name: Checkout plataforma-cursos
-        uses: actions/checkout@v4
-        with:
-          path: plataforma-cursos
-          fetch-depth: 0
-
-      - name: Checkout Agente QA
-        uses: actions/checkout@v4
-        with:
-          repository: jeffersonquispe/agentQAEduplatform
-          token: ${{ secrets.QA_AGENT_REPO_TOKEN || secrets.GITHUB_TOKEN }}
-          path: qa-agent-src
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      - name: Instalar dependencias del Agente QA
-        run: pip install anthropic
-
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
-
-      - name: Determinar capabilities afectadas por el diff
-        id: changed
-        working-directory: plataforma-cursos
-        run: |
-          set -e
-          BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          git fetch origin "$BASE_SHA" --depth=1
-          FILES=$(git diff --name-only "$BASE_SHA"...HEAD)
-          echo "Archivos cambiados:"
-          echo "$FILES"
-          CAPS=$(printf '%s' "$FILES" | node scripts/map-changed-files-to-capabilities.mjs)
-          echo "Capabilities afectadas: $CAPS"
-          echo "caps=$CAPS" >> "$GITHUB_OUTPUT"
-
-      - name: Ejecutar Agente QA por capability
-        working-directory: qa-agent-src
+      - run: npm ci
+      - run: npx playwright install --with-deps
+      - name: Ejecutar pruebas e2e (criterios de aceptacion de openspec/specs)
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          CAPS: ${{ steps.changed.outputs.caps }}
-        run: |
-          set -e
-          REPO_PATH="$GITHUB_WORKSPACE/plataforma-cursos"
-          REPORT="$GITHUB_WORKSPACE/qa-report.md"
-          echo "## Reporte del Agente QA" > "$REPORT"
-          echo "" >> "$REPORT"
-          COUNT=$(node -e "console.log(JSON.parse(process.env.CAPS).length)")
-          if [ "$COUNT" -eq 0 ]; then
-            echo "_Ningun archivo cambiado mapea a una capability conocida de openspec/specs/. Sin evaluacion automatica._" >> "$REPORT"
-          else
-            node -e "JSON.parse(process.env.CAPS).forEach((c) => console.log(c))" | while IFS= read -r cap; do
-              echo "### Capability: $cap" >> "$REPORT"
-              echo '```' >> "$REPORT"
-              python -m agente_qa.agente "$REPO_PATH" "$cap" --tipos unitaria >> "$REPORT" 2>&1 \
-                || echo "(el agente termino con error o sin reporte valido; ver salida arriba)" >> "$REPORT"
-              echo '```' >> "$REPORT"
-              echo "" >> "$REPORT"
-            done
-          fi
-
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_TEST_ANON_KEY }}
+          E2E_INSTRUCTOR_EMAIL: ${{ secrets.E2E_INSTRUCTOR_EMAIL }}
+          E2E_INSTRUCTOR_PASSWORD: ${{ secrets.E2E_INSTRUCTOR_PASSWORD }}
+          E2E_STUDENT_EMAIL: ${{ secrets.E2E_STUDENT_EMAIL }}
+          E2E_STUDENT_PASSWORD: ${{ secrets.E2E_STUDENT_PASSWORD }}
+        run: npx playwright test
       - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
         with:
-          name: qa-report
-          path: qa-report.md
+          name: e2e-report
+          path: playwright-report/
+          retention-days: 30
 
   code-review:
     runs-on: ubuntu-latest
@@ -146,8 +110,68 @@ jobs:
           name: code-review-report
           path: code-review-report.md
 
+  web-vitals:
+    runs-on: ubuntu-latest
+    # Reutiliza los secrets del proyecto Supabase de pruebas (los mismos del job "tests"): sin ellos
+    # /cursos no tiene datos reales que medir, asi que el job se salta por completo.
+    if: ${{ secrets.SUPABASE_TEST_URL != '' && secrets.SUPABASE_TEST_ANON_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Instalar Chrome
+        id: setup-chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - run: npm ci
+
+      - name: Instalar herramientas de Lighthouse (no se guardan en package.json)
+        run: npm install --no-save lighthouse chrome-launcher playwright-core
+
+      - name: Build de produccion
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_TEST_ANON_KEY }}
+        run: npm run build
+
+      - name: Levantar el servidor en segundo plano
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_TEST_ANON_KEY }}
+        run: |
+          nohup npm run start -- -p 3200 > server.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3200/ -o /dev/null && exit 0
+            sleep 2
+          done
+          echo "El servidor no respondio a tiempo:"; cat server.log; exit 1
+
+      - name: Medir Web Vitals (paginas publicas)
+        env:
+          PERF_TOOLS_DIR: ${{ github.workspace }}
+          CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+          BASE_URL: http://localhost:3200
+          OUT_DIR: reports/perf/pr-${{ github.event.pull_request.number }}
+          RUNS: 2
+          ONLY: home,cursos,curso-detalle
+        run: node scripts/lighthouse-perf.mjs
+
+      - name: Comparar contra el presupuesto
+        run: node scripts/check-perf-budget.mjs "reports/perf/pr-${{ github.event.pull_request.number }}/summary.json" > web-vitals-report.md
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: web-vitals-report
+          path: |
+            web-vitals-report.md
+            reports/perf/pr-${{ github.event.pull_request.number }}/summary.json
+
   comment:
-    needs: [qa-agent, code-review]
+    needs: [code-review, web-vitals]
     if: always()
     runs-on: ubuntu-latest
     permissions:
@@ -155,12 +179,12 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: qa-report
+          name: code-review-report
           path: .
         continue-on-error: true
       - uses: actions/download-artifact@v4
         with:
-          name: code-review-report
+          name: web-vitals-report
           path: .
         continue-on-error: true
 
@@ -169,13 +193,7 @@ jobs:
           {
             echo "## Reportes automaticos del PR"
             echo ""
-            echo "### Agente QA (criterios de aceptacion de openspec/specs)"
-            echo ""
-            if [ -f qa-report.md ]; then
-              cat qa-report.md
-            else
-              echo "_No se genero reporte (el job qa-agent fallo o fue cancelado)._"
-            fi
+            echo "_Criterios de aceptacion de openspec/specs: verificados por la suite local de Playwright en el job **e2e** (gate, no informe aqui; ver la pestaña Checks)._"
             echo ""
             echo "### Code reviewer (seguridad, RLS, secretos, claridad, pruebas, a11y/SEO)"
             echo ""
@@ -185,6 +203,14 @@ jobs:
               echo '```'
             else
               echo "_No se genero reporte (el job code-review fallo o fue cancelado)._"
+            fi
+            echo ""
+            echo "### Web Vitals (LCP/CLS/TBT vs. presupuesto, solo paginas publicas)"
+            echo ""
+            if [ -f web-vitals-report.md ]; then
+              cat web-vitals-report.md
+            else
+              echo "_No se genero reporte (sin secrets de Supabase de pruebas configurados, o el job fallo/fue cancelado)._"
             fi
           } > combined-comment.md
 

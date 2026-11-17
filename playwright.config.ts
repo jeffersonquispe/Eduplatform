@@ -27,11 +27,12 @@ export default defineConfig({
   },
   projects: [
     // Inicia sesion una vez por rol y guarda las sesiones en playwright/.auth/ (e2e/auth.setup.ts).
-    { name: "setup", testMatch: /auth\.setup\.ts/ },
+    // reset-data.setup.ts borra antes las inscripciones y resenas que dejaron corridas anteriores.
+    { name: "setup", testMatch: /\.setup\.ts/ },
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
-      testIgnore: /auth\.setup\.ts/,
+      testIgnore: /\.setup\.ts/,
       dependencies: ["setup"],
     },
   ],

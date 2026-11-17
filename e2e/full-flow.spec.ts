@@ -23,7 +23,7 @@ test("instructor publica, estudiante se inscribe, aprende y resena; el promedio 
   const editorUrl = instructor.url();
   const courseId = editorUrl.split("/").pop()!;
 
-  await instructor.getByLabel("Titulo de la nueva seccion").fill("Unica seccion");
+  await instructor.getByRole("textbox", { name: "Titulo de la nueva seccion" }).fill("Unica seccion");
   await instructor.getByRole("button", { name: "Agregar seccion" }).click();
   const section = instructor.getByTestId("section").first();
   const add = section.locator("details").filter({ has: instructor.locator("summary", { hasText: "Agregar leccion" }) });

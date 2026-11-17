@@ -66,7 +66,7 @@ test("ciclo completo: crear, estructurar, reordenar, publicar, despublicar y eli
   await expect(page.locator('p[role="alert"]')).toContainText("al menos una leccion");
 
   // Seccion
-  await page.getByLabel("Titulo de la nueva seccion").fill("Introduccion");
+  await page.getByRole("textbox", { name: "Titulo de la nueva seccion" }).fill("Introduccion");
   await page.getByRole("button", { name: "Agregar seccion" }).click();
   const section = page.getByTestId("section").first();
   await expect(section.getByLabel("Titulo de la seccion Introduccion")).toBeVisible();

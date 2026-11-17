@@ -10,7 +10,7 @@ const STUB_WIDGET = `<!doctype html><html lang="es"><body>
   window.received = [];
   addEventListener("message", (event) => {
     window.received.push(event.data.type);
-    if (event.data.type === "edy:init") parent.pRevisa cómo está configurado Playwright en este proyecto y qué pruebas de punta a punta existen. Dime qué recorridos ya cubren y cuáles no, comparándolos con las specs de assistant-widget, course-management y course-enrollment en openspec/specs. No escribas código todavía.ostMessage({ type: "edy:ready" }, event.origin);
+    if (event.data.type === "edy:init") parent.postMessage({ type: "edy:ready" }, event.origin);
     if (event.data.type === "edy:focus") document.getElementById("draft").focus();
   });
   addEventListener("keydown", (event) => {

@@ -349,8 +349,9 @@ export default function TallerAgente() {
   const reduced = useRef(false);
 
   useEffect(() => {
+    // No arranca solo: re-renderizar todo el SVG en cada fotograma ocupa el hilo principal desde la carga.
+    // Muestra un fotograma fijo (T inicial) hasta que la persona pulse "Reproducir".
     reduced.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!reduced.current) setPlaying(true);
     const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), { threshold: 0.1 });
     if (box.current) io.observe(box.current);
     return () => io.disconnect();

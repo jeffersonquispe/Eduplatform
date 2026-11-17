@@ -48,3 +48,10 @@ next-env.d.ts
 # export de Claude Design: referencia del asistente, no es codigo de la app
 /Asistente EduTech chatbot/
 /Asistente EduTech chatbot.zip
+
+# Playwright
+node_modules/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+/.next-e2e/

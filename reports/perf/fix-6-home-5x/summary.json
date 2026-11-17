@@ -1,0 +1,102 @@
+{
+  "baseUrl": "http://localhost:3200",
+  "runs": 5,
+  "summary": [
+    {
+      "name": "home",
+      "path": "/",
+      "role": null,
+      "runs": [
+        {
+          "score": 81,
+          "lcp": 2659.9849999999997,
+          "cls": 0,
+          "bytes": 259740,
+          "fcp": 799.9849999999999,
+          "tbt": 626.5074999999999,
+          "obsLcp": 245,
+          "obsFcp": 245,
+          "docEnd": 1132.847000002861,
+          "jsBytes": 160028,
+          "fontBytes": 52996,
+          "finalPath": "/",
+          "error": null
+        },
+        {
+          "score": 96,
+          "lcp": 2357.3070000000002,
+          "cls": 0.002287683774217251,
+          "bytes": 259738,
+          "fcp": 814.307,
+          "tbt": 177.00000000000023,
+          "obsLcp": 177,
+          "obsFcp": 177,
+          "docEnd": 1003.3419999778271,
+          "jsBytes": 160028,
+          "fontBytes": 52996,
+          "finalPath": "/",
+          "error": null
+        },
+        {
+          "score": 88,
+          "lcp": 2353.6182,
+          "cls": 0.002287683774217251,
+          "bytes": 259984,
+          "fcp": 776.6181999999999,
+          "tbt": 415,
+          "obsLcp": 170,
+          "obsFcp": 170,
+          "docEnd": 1073.3609999716282,
+          "jsBytes": 160028,
+          "fontBytes": 52996,
+          "finalPath": "/",
+          "error": null
+        },
+        {
+          "score": 91,
+          "lcp": 2328.362,
+          "cls": 0.002287683774217251,
+          "bytes": 259981,
+          "fcp": 790.3620000000001,
+          "tbt": 324,
+          "obsLcp": 216,
+          "obsFcp": 216,
+          "docEnd": 712.152999997139,
+          "jsBytes": 160028,
+          "fontBytes": 52996,
+          "finalPath": "/",
+          "error": null
+        },
+        {
+          "score": 95,
+          "lcp": 2421.345,
+          "cls": 0.002287683774217251,
+          "bytes": 259982,
+          "fcp": 792.345,
+          "tbt": 179.99999999999977,
+          "obsLcp": 156,
+          "obsFcp": 156,
+          "docEnd": 671.7029999792576,
+          "jsBytes": 160028,
+          "fontBytes": 52996,
+          "finalPath": "/",
+          "error": null
+        }
+      ],
+      "median": {
+        "score": 91,
+        "lcp": 2357.3070000000002,
+        "cls": 0.002287683774217251,
+        "bytes": 259981,
+        "fcp": 792.345,
+        "tbt": 324,
+        "obsLcp": 177,
+        "obsFcp": 177,
+        "docEnd": 1003.3419999778271,
+        "jsBytes": 160028,
+        "fontBytes": 52996
+      },
+      "redirected": false
+    }
+  ]
+}

@@ -26,7 +26,7 @@ export default async function MyCoursesPage() {
       ) : (
         <ul className="eb-grid mt-6">
           {enrollments.map(({ course }) => (
-            <li key={course!.id} className="eb-card">
+            <li key={course!.id} className="eb-card" data-testid="course-card">
               <h2 className="text-base font-semibold">{course!.title}</h2>
               {course!.instructor ? (
                 <p className="mt-1 text-xs text-fg-2">Por {course!.instructor.display_name}</p>

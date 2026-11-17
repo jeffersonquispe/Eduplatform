@@ -1,0 +1,270 @@
+{
+  "baseUrl": "http://localhost:3200",
+  "runs": 3,
+  "summary": [
+    {
+      "name": "home",
+      "path": "/",
+      "role": null,
+      "runs": [
+        {
+          "score": 88,
+          "lcp": 3029.202,
+          "cls": 0.0006370114417299924,
+          "bytes": 263444,
+          "fcp": 929.202,
+          "tbt": 288.5,
+          "obsLcp": 1170,
+          "obsFcp": 159,
+          "docEnd": 1055.0040000081062,
+          "jsBytes": 157656,
+          "fontBytes": 52996,
+          "finalPath": "/",
+          "error": null
+        },
+        {
+          "score": 87,
+          "lcp": 3028.4799999999996,
+          "cls": 0.0006370114417299924,
+          "bytes": 263445,
+          "fcp": 941.3199999999999,
+          "tbt": 314.84000000000003,
+          "obsLcp": 1256,
+          "obsFcp": 165,
+          "docEnd": 1136.1650000214577,
+          "jsBytes": 157656,
+          "fontBytes": 52996,
+          "finalPath": "/",
+          "error": null
+        },
+        {
+          "score": 92,
+          "lcp": 2856.474,
+          "cls": 0,
+          "bytes": 263260,
+          "fcp": 936.4739999999999,
+          "tbt": 213.99999999999977,
+          "obsLcp": 486,
+          "obsFcp": 133,
+          "docEnd": 352.1769999861717,
+          "jsBytes": 157656,
+          "fontBytes": 52996,
+          "finalPath": "/",
+          "error": null
+        }
+      ],
+      "median": {
+        "score": 88,
+        "lcp": 3028.4799999999996,
+        "cls": 0.0006370114417299924,
+        "bytes": 263444,
+        "fcp": 936.4739999999999,
+        "tbt": 288.5,
+        "obsLcp": 1170,
+        "obsFcp": 159,
+        "docEnd": 1055.0040000081062,
+        "jsBytes": 157656,
+        "fontBytes": 52996
+      },
+      "redirected": false
+    },
+    {
+      "name": "cursos",
+      "path": "/cursos",
+      "role": null,
+      "runs": [
+        {
+          "score": 91,
+          "lcp": 2627.5812499999997,
+          "cls": 0,
+          "bytes": 263895,
+          "fcp": 782.865,
+          "tbt": 272.9999999999991,
+          "obsLcp": 1064,
+          "obsFcp": 155,
+          "docEnd": 987.2260000109673,
+          "jsBytes": 158798,
+          "fontBytes": 52996,
+          "finalPath": "/cursos",
+          "error": null
+        },
+        {
+          "score": 90,
+          "lcp": 2906.5519999999997,
+          "cls": 0,
+          "bytes": 263682,
+          "fcp": 783.0519999999999,
+          "tbt": 248.5,
+          "obsLcp": 457,
+          "obsFcp": 139,
+          "docEnd": 354.4930000305176,
+          "jsBytes": 158798,
+          "fontBytes": 52996,
+          "finalPath": "/cursos",
+          "error": null
+        },
+        {
+          "score": 89,
+          "lcp": 2735.6700000000005,
+          "cls": 0,
+          "bytes": 263894,
+          "fcp": 776.6700000000001,
+          "tbt": 320,
+          "obsLcp": 1120,
+          "obsFcp": 155,
+          "docEnd": 1046.5569999814034,
+          "jsBytes": 158798,
+          "fontBytes": 52996,
+          "finalPath": "/cursos",
+          "error": null
+        }
+      ],
+      "median": {
+        "score": 90,
+        "lcp": 2735.6700000000005,
+        "cls": 0,
+        "bytes": 263894,
+        "fcp": 782.865,
+        "tbt": 272.9999999999991,
+        "obsLcp": 1064,
+        "obsFcp": 155,
+        "docEnd": 987.2260000109673,
+        "jsBytes": 158798,
+        "fontBytes": 52996
+      },
+      "redirected": false
+    },
+    {
+      "name": "curso-detalle",
+      "path": "/cursos/05c03491-bd1e-4c77-9e56-3486922b6794",
+      "role": null,
+      "runs": [
+        {
+          "score": 92,
+          "lcp": 2851.853,
+          "cls": 0,
+          "bytes": 261617,
+          "fcp": 789.8530000000001,
+          "tbt": 199,
+          "obsLcp": 1805,
+          "obsFcp": 549,
+          "docEnd": 1735.5030000209808,
+          "jsBytes": 158798,
+          "fontBytes": 52996,
+          "finalPath": "/cursos/05c03491-bd1e-4c77-9e56-3486922b6794",
+          "error": null
+        },
+        {
+          "score": 82,
+          "lcp": 2976.1939999999995,
+          "cls": 0,
+          "bytes": 261618,
+          "fcp": 780.194,
+          "tbt": 508.403,
+          "obsLcp": 1780,
+          "obsFcp": 273,
+          "docEnd": 1720.4399999976158,
+          "jsBytes": 158798,
+          "fontBytes": 52996,
+          "finalPath": "/cursos/05c03491-bd1e-4c77-9e56-3486922b6794",
+          "error": null
+        },
+        {
+          "score": 86,
+          "lcp": 2726.4995000000004,
+          "cls": 0,
+          "bytes": 261617,
+          "fcp": 776.3330000000001,
+          "tbt": 413.8334999999995,
+          "obsLcp": 981,
+          "obsFcp": 222,
+          "docEnd": 926.7880000174046,
+          "jsBytes": 158798,
+          "fontBytes": 52996,
+          "finalPath": "/cursos/05c03491-bd1e-4c77-9e56-3486922b6794",
+          "error": null
+        }
+      ],
+      "median": {
+        "score": 86,
+        "lcp": 2851.853,
+        "cls": 0,
+        "bytes": 261617,
+        "fcp": 780.194,
+        "tbt": 413.8334999999995,
+        "obsLcp": 1780,
+        "obsFcp": 273,
+        "docEnd": 1720.4399999976158,
+        "jsBytes": 158798,
+        "fontBytes": 52996
+      },
+      "redirected": false
+    },
+    {
+      "name": "mis-cursos",
+      "path": "/mis-cursos",
+      "role": "student",
+      "runs": [
+        {
+          "score": 91,
+          "lcp": 2629.1889999999994,
+          "cls": 0.02285447692332677,
+          "bytes": 249332,
+          "fcp": 798.6890000000001,
+          "tbt": 268,
+          "obsLcp": 1740,
+          "obsFcp": 192,
+          "docEnd": 1728.0140000283718,
+          "jsBytes": 156159,
+          "fontBytes": 52996,
+          "finalPath": "/mis-cursos",
+          "error": null
+        },
+        {
+          "score": 91,
+          "lcp": 2670.538,
+          "cls": 0.02285447692332677,
+          "bytes": 249331,
+          "fcp": 776.538,
+          "tbt": 270,
+          "obsLcp": 2640,
+          "obsFcp": 160,
+          "docEnd": 2619.207000017166,
+          "jsBytes": 156159,
+          "fontBytes": 52996,
+          "finalPath": "/mis-cursos",
+          "error": null
+        },
+        {
+          "score": 96,
+          "lcp": 2362.9399999999996,
+          "cls": 0,
+          "bytes": 249332,
+          "fcp": 779.5519999999999,
+          "tbt": 179,
+          "obsLcp": 1157,
+          "obsFcp": 245,
+          "docEnd": 1147.5690000355244,
+          "jsBytes": 156159,
+          "fontBytes": 52996,
+          "finalPath": "/mis-cursos",
+          "error": null
+        }
+      ],
+      "median": {
+        "score": 91,
+        "lcp": 2629.1889999999994,
+        "cls": 0.02285447692332677,
+        "bytes": 249332,
+        "fcp": 779.5519999999999,
+        "tbt": 268,
+        "obsLcp": 1740,
+        "obsFcp": 192,
+        "docEnd": 1728.0140000283718,
+        "jsBytes": 156159,
+        "fontBytes": 52996
+      },
+      "redirected": false
+    }
+  ]
+}

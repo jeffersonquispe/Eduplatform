@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [".claude/hooks/block-secrets.js"],
+            "timeout": 10,
+            "statusMessage": "Revisando que no sea un .env o un secreto..."
+          }
+        ]
+      }
+    ]
+  }
+}

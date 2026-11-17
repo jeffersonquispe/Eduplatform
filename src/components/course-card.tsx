@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { CourseSummary } from "@/lib/courses";
 import { coursePlaceholder } from "@/lib/course-placeholder";
+import { formatRatingAvg, reviewCountLabel } from "@/lib/reviews";
 import { Badge, StatusBadge } from "@/components/ui";
 
 export function Rating({ avg, count }: { avg: number; count: number }) {
@@ -12,8 +13,8 @@ export function Rating({ avg, count }: { avg: number; count: number }) {
     <span className="text-xs text-fg-2">
       <span className="sr-only">Valoración: </span>
       <span aria-hidden className="text-star">★</span>{" "}
-      {Number(avg).toLocaleString("es", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}{" "}
-      <span className="text-fg-3">({count} {count === 1 ? "resena" : "resenas"})</span>
+      {formatRatingAvg(avg)}{" "}
+      <span className="text-fg-3">({count} {reviewCountLabel(count)})</span>
     </span>
   );
 }
@@ -34,7 +35,7 @@ type Props = {
 export function CourseCard({ course, variant = "catalog", status, href, actions, meta, showImage = false }: Props) {
   const instructor = variant === "instructor";
   return (
-    <li className="eb-card">
+    <li className="eb-card" data-testid="course-card">
       {showImage ? (
         <img
           src={coursePlaceholder(course.category?.slug ?? course.id)}
@@ -62,7 +63,7 @@ export function CourseCard({ course, variant = "catalog", status, href, actions,
         ) : (
           <>
             {course.instructor ? (
-              <Link href={`/instructores/${course.instructor.id}`} className="text-xs text-fg-2 hover:underline">
+              <Link href={`/instructores/${course.instructor.id}`} prefetch={false} className="text-xs text-fg-2 hover:underline">
                 {course.instructor.display_name}
               </Link>
             ) : (

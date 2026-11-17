@@ -1,0 +1,72 @@
+{
+  "baseUrl": "http://localhost:3200",
+  "runs": 3,
+  "summary": [
+    {
+      "name": "home",
+      "path": "/",
+      "role": null,
+      "runs": [
+        {
+          "score": 78,
+          "lcp": 2855.976,
+          "cls": 0,
+          "bytes": 264597,
+          "fcp": 943.9760000000001,
+          "tbt": 721.5120000000004,
+          "obsLcp": 492,
+          "obsFcp": 492,
+          "docEnd": 765.7689999938011,
+          "jsBytes": 157647,
+          "fontBytes": 52996,
+          "finalPath": "/",
+          "error": null
+        },
+        {
+          "score": 91,
+          "lcp": 2780.1659999999997,
+          "cls": 0,
+          "bytes": 264865,
+          "fcp": 966.1659999999999,
+          "tbt": 241.99999999999977,
+          "obsLcp": 227,
+          "obsFcp": 227,
+          "docEnd": 617.0960000157356,
+          "jsBytes": 157647,
+          "fontBytes": 52996,
+          "finalPath": "/",
+          "error": null
+        },
+        {
+          "score": 89,
+          "lcp": 2758.38,
+          "cls": 0,
+          "bytes": 264864,
+          "fcp": 947.3800000000001,
+          "tbt": 318,
+          "obsLcp": 218,
+          "obsFcp": 218,
+          "docEnd": 1052.805999994278,
+          "jsBytes": 157647,
+          "fontBytes": 52996,
+          "finalPath": "/",
+          "error": null
+        }
+      ],
+      "median": {
+        "score": 89,
+        "lcp": 2780.1659999999997,
+        "cls": 0,
+        "bytes": 264864,
+        "fcp": 947.3800000000001,
+        "tbt": 318,
+        "obsLcp": 227,
+        "obsFcp": 227,
+        "docEnd": 765.7689999938011,
+        "jsBytes": 157647,
+        "fontBytes": 52996
+      },
+      "redirected": false
+    }
+  ]
+}

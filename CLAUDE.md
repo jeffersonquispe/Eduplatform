@@ -17,11 +17,15 @@ npm run lint         # eslint
 npx playwright test                       # e2e; starts its own dev server on port 3100
 npx playwright test e2e/auth.spec.ts      # single spec file
 npx playwright test -g "test name"        # single test by title
+npm run test:unit                         # vitest, src/**/*.test.ts (pure logic, no network)
+npm run test:integration                  # vitest, src/**/*.integration.test.ts (real Supabase)
+npx vitest run --project unit src/lib/enrollment.test.ts   # single vitest file
+npx vitest run --project unit -t "test name"               # single vitest test by title
 ```
 
 Node >= 22. Env: copy `.env.example` to `.env.local` (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, optional `NEXT_PUBLIC_EDY_URL`). Only the anon key is ever used; never put `service_role` in app code.
 
-E2E tests run serially (1 worker) against the real Supabase project in `.env.local`, using accounts seeded by `supabase/tests/e2e-fixtures.sql` (credentials in `e2e/helpers.ts`); `supabase/tests/e2e-cleanup.sql` removes them. SQL tests `supabase/tests/rls.sql` and `rls_enabled.sql` check RLS scenarios and that every `public` table has RLS enabled. Schema lives in `supabase/migrations/` (apply with the Supabase CLI).
+E2E tests run serially (1 worker) against the real Supabase project in `.env.local`, using accounts seeded by `supabase/tests/e2e-fixtures.sql` (credentials in `e2e/helpers.ts`); `supabase/tests/e2e-cleanup.sql` removes them. SQL tests `supabase/tests/rls.sql` and `rls_enabled.sql` check RLS scenarios and that every `public` table has RLS enabled. Integration tests (`tests/support/escenario.ts`) create an instructor, a published course and two students in the cloud project using `service_role` and each user's own JWT (so RLS applies), then clean up. They read `SUPABASE_TEST_URL`, `SUPABASE_TEST_ANON_KEY`, `SUPABASE_TEST_SERVICE_ROLE_KEY` from `.env.test.local` (gitignored; `SUPABASE_TEST_ALLOW_REMOTE=1` required for a non-local project). That is the only place `service_role` may appear: keep it out of `src/`. CI (`.github/workflows/playwright.yml`) runs only Playwright. Schema lives in `supabase/migrations/` (apply with the Supabase CLI).
 
 ## Architecture
 
@@ -40,6 +44,7 @@ Key design decisions (full rationale in `openspec/changes/archive/2026-10-28-add
 - `lib/supabase/server.ts` (cookie-based, server components/actions) and `client.ts` (browser); typed with `lib/database.types.ts`.
 - `lib/auth.ts`: `getCurrentUser()` (React `cache`d, one query per request), `requireRole(role, next)` for protected pages, `safeNextPath()` to prevent open redirects on `?next=`.
 - `app/actions/*.ts`: server actions (`auth`, `courses`, `enrollments`, `reviews`) returning `ActionState = { error?, ok? }`, used with `components/action-form.tsx`. Pattern: validate input -> run query with the user's session -> if an update/delete returns no rows treat it as "not allowed" (RLS filtered it) -> `revalidatePath`.
+- Business decisions are extracted as pure functions in `lib/enrollment.ts` and `lib/reviews.ts` (input already loaded, no Supabase), unit-tested in `*.test.ts`; the server actions load state, call them, then write. Follow this pattern for new action logic. Their `*.integration.test.ts` siblings check the openspec criteria against real RLS.
 - Data-reading helpers: `lib/courses.ts` (catalog), `lib/learning.ts` (enrolled learning view).
 - `components/assistant-widget.tsx` (in the root layout): launcher and non-modal panel that embed Edy, the course assistant from the separate `edy-service` repo, in an iframe. It renders nothing without `NEXT_PUBLIC_EDY_URL`, loads the iframe on first open and keeps it mounted to preserve the conversation. It hands the iframe no session or user data. Messages are accepted only from the Edy origin, and `edy:navigate` only for a closed list of routes. `e2e/assistant.spec.ts` stubs the widget with `page.route`.
 

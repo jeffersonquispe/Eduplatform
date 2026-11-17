@@ -26,11 +26,17 @@ export default async function CourseDetailPage({ params }: PageProps<"/cursos/[i
   const { id } = await params;
   if (!UUID.test(id)) notFound();
 
-  const course = await getPublishedCourse(id);
+  // Las cuatro lecturas no dependen del resultado del curso (el id ya esta validado): se lanzan a la vez.
+  // La inscripcion solo espera al usuario, no al curso ni a las resenas. RLS sigue filtrando cada consulta.
+  const userPromise = getCurrentUser();
+  const enrolledPromise = userPromise.then((u) => (u?.role === "student" ? isEnrolled(id, u.id) : false));
+  const [course, reviews, user, enrolled] = await Promise.all([
+    getPublishedCourse(id),
+    getCourseReviews(id),
+    userPromise,
+    enrolledPromise,
+  ]);
   if (!course) notFound();
-  const reviews = await getCourseReviews(course.id);
-  const user = await getCurrentUser();
-  const enrolled = user?.role === "student" ? await isEnrolled(course.id, user.id) : false;
   const myReview = user ? reviews.find((r) => r.student_id === user.id) : undefined;
   const lessonCount = course.sections.reduce((n, s) => n + s.lessons.length, 0);
 

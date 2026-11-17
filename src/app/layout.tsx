@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { SiteHeader } from "@/components/site-header";
+import { SiteHeader, SiteHeaderFallback } from "@/components/site-header";
 import { AssistantWidget } from "@/components/assistant-widget";
 
 const geistSans = Geist({
@@ -13,6 +13,8 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  // Solo el taller del inicio usa la fuente mono: sin precarga se descarga unicamente si hay texto que la pida.
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -33,7 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <a href="#contenido" className="eb-skip">
           Saltar al contenido
         </a>
-        <Suspense fallback={<div className="eb-header h-[49px]" />}>
+        <Suspense fallback={<SiteHeaderFallback />}>
           <SiteHeader />
         </Suspense>
         <Suspense fallback={<div className="flex-1" aria-busy="true" />}>{children}</Suspense>

@@ -55,7 +55,7 @@ async function searchSemantic(q: string): Promise<CourseSummary[] | null> {
 // Catalogo publico: siempre filtra por publicado, aunque RLS tambien deja ver
 // borradores propios y cursos despublicados en los que el usuario esta inscrito.
 // Con `q` ordena por cercania semantica; sin `q` (o si la busqueda semantica falla) usa fecha y texto completo.
-export async function getPublishedCourses(opts: { category?: string; q?: string } = {}) {
+export async function getPublishedCourses(opts: { category?: string; q?: string; limit?: number } = {}) {
   const q = opts.q?.trim();
 
   if (q) {
@@ -72,6 +72,8 @@ export async function getPublishedCourses(opts: { category?: string; q?: string 
     .order("created_at", { ascending: false });
 
   if (q) query = query.textSearch("search", q, { config: "spanish", type: "websearch" });
+  // Sin limite se trae todo el catalogo; el inicio solo muestra unos pocos y no necesita el resto.
+  if (opts.limit) query = query.limit(opts.limit);
 
   if (opts.category) {
     const { data: cat } = await supabase

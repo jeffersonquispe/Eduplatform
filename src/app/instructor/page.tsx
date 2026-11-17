@@ -3,6 +3,7 @@ import { CourseCard } from "@/components/course-card";
 import { buttonClass, EmptyState } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
 import type { CourseSummary } from "@/lib/courses";
+import { averageOfRatedCourses, formatRatingAvg } from "@/lib/reviews";
 import { createClient } from "@/lib/supabase/server";
 
 // Pagina dependiente de la sesion y de la base de datos: la navegacion puede esperar al servidor.
@@ -25,8 +26,7 @@ export default async function InstructorPage({ searchParams }: PageProps<"/instr
   const all = data ?? [];
   const courses = filtro === "all" ? all : all.filter((c) => c.status === filtro);
   const totalEnrolled = all.reduce((n, c) => n + (c.enrollments?.[0]?.count ?? 0), 0);
-  const rated = all.filter((c) => c.rating_count > 0);
-  const avgRating = rated.length ? rated.reduce((n, c) => n + Number(c.rating_avg), 0) / rated.length : null;
+  const avgRating = averageOfRatedCourses(all);
   const tabs = [
     { key: "all", label: "Todos", href: "/instructor", n: all.length },
     { key: "published", label: "Publicados", href: "/instructor?estado=published", n: all.filter((c) => c.status === "published").length },
@@ -48,7 +48,7 @@ export default async function InstructorPage({ searchParams }: PageProps<"/instr
             {[
               ["Cursos", String(all.length)],
               ["Inscritos", String(totalEnrolled)],
-              ["Valoracion media", avgRating === null ? "—" : avgRating.toLocaleString("es", { minimumFractionDigits: 1, maximumFractionDigits: 1 })],
+              ["Valoracion media", avgRating === null ? "—" : formatRatingAvg(avgRating)],
             ].map(([label, value]) => (
               <div key={label} className="eb-surface p-4">
                 <dt className="text-xs text-fg-3">{label}</dt>

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
+import { validateReview } from "@/lib/reviews";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionState } from "@/app/actions/courses";
 
@@ -13,11 +14,8 @@ function parse(fd: FormData) {
 }
 
 function invalid(rating: number, comment: string | null): ActionState | null {
-  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-    return { error: "La calificacion debe ser un numero entero de 1 a 5." };
-  }
-  if (comment && comment.length > 2000) return { error: "El comentario no puede superar 2000 caracteres." };
-  return null;
+  const error = validateReview(rating, comment);
+  return error ? { error } : null;
 }
 
 function refresh(courseId: string) {

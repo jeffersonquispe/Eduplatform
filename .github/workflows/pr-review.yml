@@ -1,0 +1,194 @@
+name: PR Review (tests + Agente QA + code-reviewer)
+
+# Decisiones de diseño, para quien lea/mantenga este workflow:
+# - El Agente QA vive en un repo aparte (jeffersonquispe/agentQAEduplatform); se clona como
+#   checkout adicional en el job qa-agent.
+# - El Agente QA solo corre con --tipos unitaria: sus pruebas e2e/sql usan el proyecto Supabase
+#   vinculado y, segun su propio README, pueden mutar datos (p.ej. borrar cuentas @e2e-test.local).
+#   No se habilitan automaticamente en un PR sin supervision.
+# - Que capability(s) evaluar se decide por un mapeo heuristico de archivos cambiados
+#   (scripts/map-changed-files-to-capabilities.mjs) — ajustalo si una capability nueva no coincide.
+# - El code-reviewer es el subagente .claude/agents/code-reviewer.md, invocado en modo headless con
+#   la Claude Code CLI.
+# - Los tests (lint/unit/integration) son un chequeo normal del PR; el Agente QA y el code-reviewer
+#   publican su propio comentario con hallazgos — son reportes para que decida una persona, no gates.
+# - En PRs desde forks, GITHUB_TOKEN es de solo lectura por defecto: el paso de comentario puede fallar
+#   ahi; no es un bug de este workflow.
+
+on:
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: pr-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test:unit
+      - name: Run integration tests
+        if: ${{ secrets.SUPABASE_TEST_URL != '' && secrets.SUPABASE_TEST_ANON_KEY != '' && secrets.SUPABASE_TEST_SERVICE_ROLE_KEY != '' }}
+        env:
+          SUPABASE_TEST_URL: ${{ secrets.SUPABASE_TEST_URL }}
+          SUPABASE_TEST_ANON_KEY: ${{ secrets.SUPABASE_TEST_ANON_KEY }}
+          SUPABASE_TEST_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_TEST_SERVICE_ROLE_KEY }}
+          SUPABASE_TEST_ALLOW_REMOTE: "1"
+        run: npm run test:integration
+
+  qa-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout plataforma-cursos
+        uses: actions/checkout@v4
+        with:
+          path: plataforma-cursos
+          fetch-depth: 0
+
+      - name: Checkout Agente QA
+        uses: actions/checkout@v4
+        with:
+          repository: jeffersonquispe/agentQAEduplatform
+          token: ${{ secrets.QA_AGENT_REPO_TOKEN || secrets.GITHUB_TOKEN }}
+          path: qa-agent-src
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Instalar dependencias del Agente QA
+        run: pip install anthropic
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Determinar capabilities afectadas por el diff
+        id: changed
+        working-directory: plataforma-cursos
+        run: |
+          set -e
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          git fetch origin "$BASE_SHA" --depth=1
+          FILES=$(git diff --name-only "$BASE_SHA"...HEAD)
+          echo "Archivos cambiados:"
+          echo "$FILES"
+          CAPS=$(printf '%s' "$FILES" | node scripts/map-changed-files-to-capabilities.mjs)
+          echo "Capabilities afectadas: $CAPS"
+          echo "caps=$CAPS" >> "$GITHUB_OUTPUT"
+
+      - name: Ejecutar Agente QA por capability
+        working-directory: qa-agent-src
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CAPS: ${{ steps.changed.outputs.caps }}
+        run: |
+          set -e
+          REPO_PATH="$GITHUB_WORKSPACE/plataforma-cursos"
+          REPORT="$GITHUB_WORKSPACE/qa-report.md"
+          echo "## Reporte del Agente QA" > "$REPORT"
+          echo "" >> "$REPORT"
+          COUNT=$(node -e "console.log(JSON.parse(process.env.CAPS).length)")
+          if [ "$COUNT" -eq 0 ]; then
+            echo "_Ningun archivo cambiado mapea a una capability conocida de openspec/specs/. Sin evaluacion automatica._" >> "$REPORT"
+          else
+            node -e "JSON.parse(process.env.CAPS).forEach((c) => console.log(c))" | while IFS= read -r cap; do
+              echo "### Capability: $cap" >> "$REPORT"
+              echo '```' >> "$REPORT"
+              python -m agente_qa.agente "$REPO_PATH" "$cap" --tipos unitaria >> "$REPORT" 2>&1 \
+                || echo "(el agente termino con error o sin reporte valido; ver salida arriba)" >> "$REPORT"
+              echo '```' >> "$REPORT"
+              echo "" >> "$REPORT"
+            done
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qa-report
+          path: qa-report.md
+
+  code-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Instalar Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Ejecutar subagente code-reviewer
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -e
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          claude -p "Revisa el diff de este Pull Request contra el commit base $BASE_SHA (usa 'git diff $BASE_SHA...HEAD') siguiendo tu rol y alcance de code-reviewer. Devuelve solo la lista de hallazgos en el formato de severidad definido en tu system prompt." \
+            --settings "{\"agent\":\"code-reviewer\",\"permissions\":{\"defaultMode\":\"bypassPermissions\"}}" \
+            > code-review-report.md
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: code-review-report
+          path: code-review-report.md
+
+  comment:
+    needs: [qa-agent, code-review]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: qa-report
+          path: .
+        continue-on-error: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: code-review-report
+          path: .
+        continue-on-error: true
+
+      - name: Combinar reportes
+        run: |
+          {
+            echo "## Reportes automaticos del PR"
+            echo ""
+            echo "### Agente QA (criterios de aceptacion de openspec/specs)"
+            echo ""
+            if [ -f qa-report.md ]; then
+              cat qa-report.md
+            else
+              echo "_No se genero reporte (el job qa-agent fallo o fue cancelado)._"
+            fi
+            echo ""
+            echo "### Code reviewer (seguridad, RLS, secretos, claridad, pruebas, a11y/SEO)"
+            echo ""
+            if [ -f code-review-report.md ]; then
+              echo '```'
+              cat code-review-report.md
+              echo '```'
+            else
+              echo "_No se genero reporte (el job code-review fallo o fue cancelado)._"
+            fi
+          } > combined-comment.md
+
+      - uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: automated-pr-reports
+          path: combined-comment.md

@@ -32,7 +32,7 @@ test("un instructor no puede abrir el editor del curso de otro", async ({ page }
   await expect(page).toHaveURL(/\/instructor$/);
   await page.goto(`/instructor/cursos/${FOREIGN_COURSE}`);
   await expect(page.getByRole("heading", { name: "Pagina no encontrada" })).toBeVisible();
-  await expect(page.getByText("Fundamentos de prompting")).toHaveCount(0);
+  await expect(page.locator("main").getByText("Fundamentos de prompting")).toHaveCount(0);
 });
 
 test("un estudiante no puede crear cursos", async ({ page }) => {

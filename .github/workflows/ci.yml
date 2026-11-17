@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# Solo lectura del repo: este workflow no comenta ni publica nada.
+permissions:
+  contents: read
+
+# Un push nuevo a la misma rama cancela la ejecucion anterior en curso.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Linter
+        run: npm run lint
+
+      - name: Verificador de tipos
+        run: npx tsc --noEmit
+
+      # Solo el proyecto "unit": no necesita secrets. Las de integracion y e2e requieren Supabase.
+      - name: Pruebas de Vitest
+        run: npm run test:unit

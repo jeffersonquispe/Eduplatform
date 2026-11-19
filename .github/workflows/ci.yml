@@ -1,0 +1,175 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# Solo lectura del repo: este workflow no comenta ni publica nada.
+permissions:
+  contents: read
+
+# Un push nuevo a la misma rama cancela la ejecucion anterior en curso.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Linter
+        run: npm run lint
+
+      # PageProps y LayoutProps son tipos globales que Next genera (.next/types); en un checkout limpio no existen.
+      - name: Generar tipos de rutas de Next
+        run: npx next typegen
+
+      - name: Verificador de tipos
+        run: npx tsc --noEmit
+
+      # Solo el proyecto "unit": no necesita secrets. Las de integracion y e2e requieren Supabase.
+      - name: Pruebas de Vitest
+        run: npm run test:unit
+
+  e2e:
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Los secrets no existen en PRs desde forks: ahi el job se salta en vez de fallar.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    # Los E2E crean y borran datos en el mismo proyecto Supabase: nunca dos a la vez, sea cual sea la rama.
+    concurrency:
+      group: e2e-supabase
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Solo Chromium (el unico proyecto de playwright.config.ts), con sus librerias del sistema.
+      - name: Instalar Chromium
+        run: npx playwright install --with-deps chromium
+
+      # E2E_PROD=1 hace que el webServer de Playwright ejecute `npm run build && npm run start`
+      # (build de produccion en .next-e2e, puerto 3100) y espere a que responda antes de las pruebas.
+      # NEXT_PUBLIC_* se incrustan en el bundle al compilar: aqui solo van valores publicos.
+      - name: Playwright contra el build de produccion
+        env:
+          E2E_PROD: "1"
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_TEST_ANON_KEY }}
+          E2E_INSTRUCTOR_EMAIL: ${{ secrets.E2E_INSTRUCTOR_EMAIL }}
+          E2E_INSTRUCTOR_PASSWORD: ${{ secrets.E2E_INSTRUCTOR_PASSWORD }}
+          E2E_STUDENT_EMAIL: ${{ secrets.E2E_STUDENT_EMAIL }}
+          E2E_STUDENT_PASSWORD: ${{ secrets.E2E_STUDENT_PASSWORD }}
+          SUPABASE_TEST_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_TEST_SERVICE_ROLE_KEY }}
+        run: npm run test:e2e
+
+      # Reporte HTML y trazas (test-results/, solo se conservan las de pruebas fallidas).
+      - name: Subir reporte y trazas
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-e2e
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+          if-no-files-found: warn
+
+  # Despliegue continuo con el CLI de Vercel. Solo corre si quality y e2e pasaron:
+  #   - pull request (no de fork): vista previa, y su URL se publica como comentario en el PR;
+  #   - push a main: produccion (--prod).
+  # Requiere los secrets VERCEL_TOKEN, VERCEL_ORG_ID y VERCEL_PROJECT_ID. El proyecto de Vercel no debe
+  # desplegar por su cuenta desde Git (ver vercel.json), o se saltaria esta compuerta.
+  deploy:
+    needs: [quality, e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+    # Permisos minimos: leer el codigo y comentar en el PR. El comentario va con el GITHUB_TOKEN, no con el de Vercel.
+    permissions:
+      contents: read
+      pull-requests: write
+    # Nunca dos despliegues a la vez sobre la misma rama; los de produccion no se cancelan a medias.
+    concurrency:
+      group: deploy-${{ github.ref }}
+      cancel-in-progress: false
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      # push a main = produccion; cualquier otro caso = vista previa.
+      VERCEL_ENV: ${{ github.event_name == 'push' && 'production' || 'preview' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Instalar el CLI de Vercel
+        run: npm install --global vercel@latest
+
+      # Descarga la configuracion del proyecto y sus variables de entorno a .vercel/ (esta en .gitignore).
+      - name: vercel pull
+        run: vercel pull --yes --environment="$VERCEL_ENV" --token="$VERCEL_TOKEN"
+
+      # Compila aqui, en el runner: lo que se publica es lo mismo que acaba de pasar las pruebas.
+      - name: vercel build
+        run: |
+          if [ "$VERCEL_ENV" = "production" ]; then vercel build --prod --token="$VERCEL_TOKEN"
+          else vercel build --token="$VERCEL_TOKEN"; fi
+
+      # Sube lo ya compilado (--prebuilt); imprime la URL del despliegue en stdout.
+      - name: vercel deploy
+        id: deploy
+        run: |
+          if [ "$VERCEL_ENV" = "production" ]; then url=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          else url=$(vercel deploy --prebuilt --token="$VERCEL_TOKEN"); fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Desplegado en $url"
+
+      # Prueba de humo: la URL responde y /cursos trae su titulo. Reintenta mientras el despliegue arranca.
+      # Los previews estan tras Vercel Deployment Protection: con el secret VERCEL_AUTOMATION_BYPASS_SECRET
+      # (Settings > Deployment Protection > Protection Bypass for Automation) se envia como header y se
+      # puede probar. Sin el, en un preview se omite con un aviso; en produccion siempre corre.
+      - name: Prueba de humo
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+          BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          if [ -z "$BYPASS" ] && [ "$VERCEL_ENV" != "production" ]; then
+            echo "::warning::Prueba de humo omitida: falta VERCEL_AUTOMATION_BYPASS_SECRET y el preview esta protegido."
+            exit 0
+          fi
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS -H "x-vercel-protection-bypass: $BYPASS" "$URL/cursos" | grep -q "Cursos | EduTech"; then
+              echo "OK: $URL/cursos"; exit 0
+            fi
+            echo "Intento $i sin exito, reintentando..."; sleep 10
+          done
+          echo "::error::$URL/cursos no responde o no contiene su titulo"; exit 1
+
+      - name: Comentar la URL en el pull request
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} --edit-last --create-if-none             --body "Vista previa: $URL (commit ${GITHUB_SHA::7})"

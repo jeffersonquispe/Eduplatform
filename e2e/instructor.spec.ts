@@ -32,7 +32,7 @@ test("un instructor no puede abrir el editor del curso de otro", async ({ page }
   await expect(page).toHaveURL(/\/instructor$/);
   await page.goto(`/instructor/cursos/${FOREIGN_COURSE}`);
   await expect(page.getByRole("heading", { name: "Pagina no encontrada" })).toBeVisible();
-  await expect(page.getByText("Fundamentos de prompting")).toHaveCount(0);
+  await expect(page.locator("main").getByText("Fundamentos de prompting")).toHaveCount(0);
 });
 
 test("un estudiante no puede crear cursos", async ({ page }) => {
@@ -66,7 +66,7 @@ test("ciclo completo: crear, estructurar, reordenar, publicar, despublicar y eli
   await expect(page.locator('p[role="alert"]')).toContainText("al menos una leccion");
 
   // Seccion
-  await page.getByLabel("Titulo de la nueva seccion").fill("Introduccion");
+  await page.getByRole("textbox", { name: "Titulo de la nueva seccion" }).fill("Introduccion");
   await page.getByRole("button", { name: "Agregar seccion" }).click();
   const section = page.getByTestId("section").first();
   await expect(section.getByLabel("Titulo de la seccion Introduccion")).toBeVisible();

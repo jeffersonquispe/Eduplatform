@@ -19,18 +19,20 @@ export default defineConfig({
   retries: 0,
   timeout: 90_000,
   expect: { timeout: 15_000 },
-  reporter: [["list"]],
+  // En CI tambien genera el reporte HTML (playwright-report/) que se sube como artefacto.
+  reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : [["list"]],
   use: {
     baseURL: `http://localhost:${PORT}`,
     trace: "retain-on-failure",
   },
   projects: [
     // Inicia sesion una vez por rol y guarda las sesiones en playwright/.auth/ (e2e/auth.setup.ts).
-    { name: "setup", testMatch: /auth\.setup\.ts/ },
+    // reset-data.setup.ts borra antes las inscripciones y resenas que dejaron corridas anteriores.
+    { name: "setup", testMatch: /\.setup\.ts/ },
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
-      testIgnore: /auth\.setup\.ts/,
+      testIgnore: /\.setup\.ts/,
       dependencies: ["setup"],
     },
   ],
